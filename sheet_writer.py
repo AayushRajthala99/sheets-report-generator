@@ -34,18 +34,22 @@ def writer(SPREADSHEET_ID, sheet_title, headers, resultArray):
 
         # Formatting Sheets Headers & Titles...
         headerLength = len(headers)
-        testNameValue = ['Test Name :', sheet_title, '',
-                         'Report Generation Time', timestamp]
-        lineBreakValue = []
 
-        for x in range(0, headerLength):
-            if (x < (headerLength-5)):
-                testNameValue.append('')
+        # Dynamic Assignment of Spreadsheet Column Range...
+        rangeValue = f"Sheet1!A1:A{headerLength}"
 
-            lineBreakValue.append('----------')
+        # testNameValue = ['Test Name :', sheet_title, '',
+        #  'Report Generation Time', timestamp]
+        # lineBreakValue = []
 
-        sheetValues.append(testNameValue)
-        sheetValues.append(headers)
+        # for x in range(0, headerLength):
+        #     if (x < (headerLength-5)):
+        #         testNameValue.append('')
+
+        #     lineBreakValue.append('----------')
+
+        # sheetValues.append(testNameValue)
+        # sheetValues.append(headers)
 
         # Creating A List containing only Values from A List of Dictionaries...
         resultValues = [list(result.values()) for result in resultArray]
@@ -53,19 +57,12 @@ def writer(SPREADSHEET_ID, sheet_title, headers, resultArray):
         # Concatenate Operation between Two Lists...
         sheetValues = sheetValues + resultValues
 
-        # Adding Line Break Between Spreadsheet Reports...
-        sheetValues.append(lineBreakValue)
-
-        # write data values into the cells starting from A1 of Sheet1
-
-        # Dynamic Assignment of Spreadsheet Column Range...
-        rangeValue = f"Sheet1!A1:A{headerLength}"
-
-        sheet.values().append(spreadsheetId=SPREADSHEET_ID, range=f"{rangeValue}",
-                              valueInputOption="RAW", body={"values": sheetValues}).execute()
-
         print("\nPopulating Google Spreadsheet for Test Name::: [ {0} ]... OK!".format(
             sheet_title))
+
+        # write data values into the cells starting from A1 of Sheet1
+        sheet.values().append(spreadsheetId=SPREADSHEET_ID, range=f"{rangeValue}",
+                              valueInputOption="RAW", body={"values": sheetValues}).execute()
         return
 
     except HttpError as error:
