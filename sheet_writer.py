@@ -22,7 +22,7 @@ creds = service_account.Credentials.from_service_account_file(
     SERVICE_ACCOUNT_FILE, scopes=SHEET_SCOPE)
 
 
-def writer(SPREADSHEET_ID, sheet_title, headers, resultArray):
+def writer(SPREADSHEET_ID, name, headers, result):
     try:
         sheetservice = build(
             SHEETS_API_NAME, SHEETS_API_VERSION, credentials=creds)
@@ -30,14 +30,13 @@ def writer(SPREADSHEET_ID, sheet_title, headers, resultArray):
 
         # --------------writing values to the cells of Sheet2
         sheetValues = []
-        timestamp = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-
-        # Formatting Sheets Headers & Titles...
-        headerLength = len(headers)
+        # timestamp = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
         # Dynamic Assignment of Spreadsheet Column Range...
+        headerLength = len(headers)
         rangeValue = f"Sheet1!A1:A{headerLength}"
 
+        # Formatting Sheets Headers & Titles...
         # testNameValue = ['Test Name :', sheet_title, '',
         #  'Report Generation Time', timestamp]
         # lineBreakValue = []
@@ -52,13 +51,14 @@ def writer(SPREADSHEET_ID, sheet_title, headers, resultArray):
         # sheetValues.append(headers)
 
         # Creating A List containing only Values from A List of Dictionaries...
-        resultValues = [list(result.values()) for result in resultArray]
+        # resultValues = [list(result.values()) for result in resultArray]
+        resultValues = [list(result.values())]
 
         # Concatenate Operation between Two Lists...
         sheetValues = sheetValues + resultValues
 
-        print("\nPopulating Google Spreadsheet for Test Name::: [ {0} ]... OK!".format(
-            sheet_title))
+        print("\nPopulating Google Spreadsheet for ::: [ {0} ]... OK!".format(
+            name))
 
         # write data values into the cells starting from A1 of Sheet1
         sheet.values().append(spreadsheetId=SPREADSHEET_ID, range=f"{rangeValue}",

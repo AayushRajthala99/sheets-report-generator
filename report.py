@@ -31,6 +31,13 @@ parent_directory_id = '--Enter The Parent Directory ID Here--'
 # Spreadsheet ID to populate the results...
 spreadsheet_id = '--Enter The Spreadsheet ID Here--'
 
+driveID = '0APeU2hZn8W62Uk9PVA'  # drive ID of the shared drive.
+# change this to choose the directory to upload the files to.
+
+parent_directory_id = '1gJc3RNApjFcyZJcNPCqDZEk--2rZsUk9'
+
+spreadsheet_id = '1Ch3wsPRgp9yetrWetmZtsygoJUc4JJajaWvbHUHF9bU'
+
 # ----------------------------------------------------------------------------------------------------------------------------------
 
 # service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
@@ -194,6 +201,10 @@ for directory in resultDirectories:
             resultDataframe = resultDataframe.replace(np.nan, '')
             resultDataframe = resultDataframe.to_dict('records')
 
+            # Extracted Headers for Spreadsheet...
+            headers = list(resultDataframe[0].keys())
+            # print(headers)
+
             print(
                 "\n--Started Link Generation for Recording, Response, Screenshot & Packet Capture Files--")
 
@@ -231,6 +242,10 @@ for directory in resultDirectories:
 
                     print(">> DONE")
 
+                    # Spreadsheet Writer Function Call for Individual Payload
+                    writer(spreadsheet_id, result['id'],
+                           headers, result)
+
                 except Exception as error:
                     print("Error in Generating Link For [ {0} ]::: {1}".format(
                         result['id'], error))
@@ -238,14 +253,6 @@ for directory in resultDirectories:
 
             print("\n--Link Generation Operation Ended--")
             # print(resultDataframe)
-
-            # Extracted Headers for Spreadsheet...
-            headers = list(resultDataframe[0].keys())
-            # print(headers)
-
-            # Spreadsheet Writer Function Call
-            writer(spreadsheet_id, test_name,
-                   headers, resultDataframe)
 
             # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
             generatedReports.append(test_name)
