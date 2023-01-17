@@ -105,3 +105,11 @@ def sharer(ID):
     except Exception as error:
         print("Error in Link Generation [Sharer] Code::: ", error)
         pass
+
+
+def shareUrlParse(ID):
+    try:
+        return (f"https://drive.google.com/file/d/{ID}")
+    except Exception as error:
+        print("Error in Shareable Link Parser Code::: ", error)
+        pass

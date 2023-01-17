@@ -4,7 +4,7 @@ import time
 import numpy as np
 from os import path
 import pandas as pd
-from sheet_writer import sharer, writer
+from sheet_writer import sharer, writer, shareUrlParse
 from service_creator import Create_Service
 from service_creator import Create_Service2
 
@@ -30,13 +30,6 @@ parent_directory_id = '--Enter The Parent Directory ID Here--'
 
 # Spreadsheet ID to populate the results...
 spreadsheet_id = '--Enter The Spreadsheet ID Here--'
-
-driveID = '0APeU2hZn8W62Uk9PVA'  # drive ID of the shared drive.
-# change this to choose the directory to upload the files to.
-
-parent_directory_id = '1gJc3RNApjFcyZJcNPCqDZEk--2rZsUk9'
-
-spreadsheet_id = '1Ch3wsPRgp9yetrWetmZtsygoJUc4JJajaWvbHUHF9bU'
 
 # ----------------------------------------------------------------------------------------------------------------------------------
 
@@ -221,22 +214,22 @@ for directory in resultDirectories:
 
                     # Generating shareable links for above File IDs...
                     if (recordingID):
-                        result['Recording Link'] = sharer(recordingID)
+                        result['Recording Link'] = f"{shareUrlParse(recordingID)}"
                     else:
                         result['Recording Link'] = 'N/A'
 
                     if (responseID):
-                        result['Response Link'] = sharer(responseID)
+                        result['Response Link'] = f"{shareUrlParse(responseID)}"
                     else:
                         result['Response Link'] = 'N/A'
 
                     if (screenshotID):
-                        result['Screenshot Link'] = sharer(screenshotID)
+                        result['Screenshot Link'] = f"{shareUrlParse(screenshotID)}"
                     else:
                         result['Screenshot Link'] = 'N/A'
 
                     if (pcapID):
-                        result['PCAP Link'] = sharer(pcapID)
+                        result['PCAP Link'] = f"{shareUrlParse(pcapID)}"
                     else:
                         result['PCAP Link'] = 'N/A'
 
