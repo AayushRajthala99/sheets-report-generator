@@ -10,8 +10,8 @@ from service_creator import Create_Service2
 
 # --------------------------------------------------------------------------------------------
 
-CLIENT_SECRET_FILE = '.\credentials\client-secret.json'
-SERVICE_ACCOUNT_FILE = '.\credentials\service-account.json'
+CLIENT_SECRET_FILE = '.\dependencies\client-secret.json'
+SERVICE_ACCOUNT_FILE = '.\dependencies\service-account.json'
 API_NAME = 'drive'
 API_VERSION = 'v3'
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -141,12 +141,12 @@ def subDirectoryInfo(parentDirectory):
 resultDirectories = lister(service, driveID, parent_directory_id)
 # print(resultDirectories)
 
-if path.isfile('.\credentials\generatedReports.txt') is False:
+if path.isfile('.\dependencies\generatedReports.txt') is False:
     print("--generatedReports.txt File Created!--")
-    File = open('.\credentials\generatedReports.txt', "x")
+    File = open('.\dependencies\generatedReports.txt', "x")
     File.close()
 
-reportFile = open('.\credentials\generatedReports.txt', 'rb')
+reportFile = open('.\dependencies\generatedReports.txt', 'rb')
 alreadyGeneratedReportList = reportFile.read().splitlines()
 reportFile.close()
 
@@ -249,7 +249,7 @@ for directory in resultDirectories:
 
             # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
             generatedReports.append(test_name)
-            file = open('.\credentials\generatedReports.txt', 'a')
+            file = open('.\dependencies\generatedReports.txt', 'a')
             file.write(f"{directoryID}\n")
             file.close()
 

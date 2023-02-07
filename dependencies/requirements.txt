@@ -1,0 +1,16 @@
+pytz
+numpy
+pandas
+urllib3
+httplib2
+oauthlib
+autopep8
+requests
+google-auth
+google-api-core
+python-dateutil
+requests-oauthlib
+google-auth-httplib2
+google-auth-oauthlib
+google-api-python-client
+googleapis-common-protos
