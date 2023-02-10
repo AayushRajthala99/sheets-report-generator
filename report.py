@@ -1,3 +1,5 @@
+import io
+import os
 import csv
 import json
 import time
@@ -31,17 +33,26 @@ parent_directory_id = '--Enter The Parent Directory ID Here--'
 # Spreadsheet ID to populate the results...
 spreadsheet_id = '--Enter The Spreadsheet ID Here--'
 
+driveID = '0AGRZ_Z8RC-_fUk9PVA'
+parent_directory_id = '13iFrOF6KSWRl09OTUJWl_pGMaSu8_Udf'
+spreadsheet_id = '1bVmvF3wigQNekqBvHPxR3aDES8o5HYRet6z5CL66kWc'
+
 # ----------------------------------------------------------------------------------------------------------------------------------
 
 # service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 service = Create_Service2(SERVICE_ACCOUNT_FILE, API_NAME, API_VERSION, SCOPES)
 
 
+def sortListofDictionaries(dictionaryList):
+    prefix, postfix = dictionaryList['name'].split('-P')
+    return (prefix, int(postfix.split('.')[0]))
+
+
 def idreturner(id, array):
     try:
-        for item in array:
-            if f"{id}" in item['name']:
-                return item['id']
+        result = [item['id'] for item in array if f"{id}" in item['name']]
+        if result:
+            return result[0]
     except Exception as error:
         print("Error in idreturner Function::: ", error)
         pass
@@ -180,6 +191,12 @@ for directory in resultDirectories:
             screenshotList = lister(service, driveID, screenshotFolderID)
             pcapList = lister(service, driveID, pcapFolderID)
 
+            # Sorted List of Dictionaries...
+            recordingList.sort(key=sortListofDictionaries)
+            responseList.sort(key=sortListofDictionaries)
+            screenshotList.sort(key=sortListofDictionaries)
+            pcapList.sort(key=sortListofDictionaries)
+
             print("\nTest Name::: [ {0} ]".format(test_name))
             # print("\nRecording List:::", recordingList)
             # print("\nResponse List:::", responseList)
@@ -189,59 +206,73 @@ for directory in resultDirectories:
             # urlInfoCSVLink = sharer(urlInfoID)
             # print("urlInfo.csv LINK:::", urlInfoCSVLink)
 
-            csvReadURL = f"https://drive.google.com/uc?id={urlInfoID}"
-            resultDataframe = pd.read_csv(csvReadURL, encoding='utf8')
+            print("\n--Gathering urlInfo.csv Information--", end='')
+            request = service.files().get_media(fileId=urlInfoID)
+            csvFile = request.execute()
+            csvFile = csvFile.decode("utf-8")
+            csvFile = io.StringIO(csvFile)
+            resultDataframe = pd.read_csv(csvFile)
             resultDataframe = resultDataframe.replace(np.nan, '')
             resultDataframe = resultDataframe.to_dict('records')
+            print(">> DONE")
 
             # Extracted Headers for Spreadsheet...
             headers = list(resultDataframe[0].keys())
-            # print(headers)
 
             print(
                 "\n--Started Link Generation for Recording, Response, Screenshot & Packet Capture Files--")
 
             for result in resultDataframe:
                 try:
+                    resultId = f"{result['Test ID']}-{result['Payload ID']}"
+
                     print(
-                        "\n--Generating Links for [ {0} ]--".format(result['id']), end='')
+                        "\n--Generating Links for [ {0} ]--".format(resultId), end='')
 
                     # Gathering File IDs...
-                    recordingID = idreturner(result['id'], recordingList)
-                    responseID = idreturner(result['id'], responseList)
-                    screenshotID = idreturner(result['id'], screenshotList)
-                    pcapID = idreturner(result['id'], pcapList)
+                    recordingID = idreturner(resultId, recordingList)
+                    responseID = idreturner(resultId, responseList)
+                    screenshotID = idreturner(resultId, screenshotList)
+                    pcapID = idreturner(resultId, pcapList)
+
+                    print("Payload File IDs==", recordingID,
+                          responseID, screenshotID, pcapID)
 
                     # Generating shareable links for above File IDs...
                     if (recordingID):
-                        result['Recording Link'] = f"{shareUrlParse(recordingID)}"
+                        # result['Video Link'] = f"{shareUrlParse(recordingID)}"
+                        result['Video Link'] = rf"https://drive.google.com/file/d/{recordingID}"
                     else:
-                        result['Recording Link'] = 'N/A'
+                        result['Video Link'] = 'N/A'
 
                     if (responseID):
-                        result['Response Link'] = f"{shareUrlParse(responseID)}"
+                        # result['Response Link'] = f"{shareUrlParse(responseID)}"
+                        result['Response Link'] = rf"https://drive.google.com/file/d/{responseID}"
                     else:
                         result['Response Link'] = 'N/A'
 
                     if (screenshotID):
-                        result['Screenshot Link'] = f"{shareUrlParse(screenshotID)}"
+                        # result['Screenshot Link'] = f"{shareUrlParse(screenshotID)}"
+                        result['Screenshot Link'] = rf"https://drive.google.com/file/d/{screenshotID}"
                     else:
                         result['Screenshot Link'] = 'N/A'
 
                     if (pcapID):
-                        result['PCAP Link'] = f"{shareUrlParse(pcapID)}"
+                        # result['PCAP Link'] = f"{shareUrlParse(pcapID)}"
+                        result['PCAP Link'] = rf"https://drive.google.com/file/d/{pcapID}"
                     else:
                         result['PCAP Link'] = 'N/A'
 
                     print(">> DONE")
 
                     # Spreadsheet Writer Function Call for Individual Payload
-                    writer(spreadsheet_id, result['id'],
-                           headers, result)
+                    writer(spreadsheet_id, resultId, headers, result)
 
                 except Exception as error:
+                    resultId = f"{result['Test ID']}-{result['Payload ID']}"
+
                     print("Error in Generating Link For [ {0} ]::: {1}".format(
-                        result['id'], error))
+                        resultId, error))
                     pass
 
             print("\n--Link Generation Operation Ended--")
