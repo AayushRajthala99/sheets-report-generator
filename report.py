@@ -50,9 +50,9 @@ def sortListofDictionaries(dictionaryList):
 
 def idreturner(id, array):
     try:
-        result = [item['id'] for item in array if f"{id}" in item['name']]
-        if result:
-            return result[0]
+        for i, item in enumerate(array):
+            if (f"{id}" in item['name']):
+                return {"index": i, "value": item['id']}
     except Exception as error:
         print("Error in idreturner Function::: ", error)
         pass
@@ -186,15 +186,16 @@ for directory in resultDirectories:
             urlInfoID = testDirectory['urlInfoID']
 
             # Retrieving List of Files in Respective Directories...
-            recordingList = lister(service, driveID, recordingFolderID)
-            responseList = lister(service, driveID, responseFolderID)
-            screenshotList = lister(service, driveID, screenshotFolderID)
-            pcapList = lister(service, driveID, pcapFolderID)
-
-            # Sorted List of Dictionaries...
+            recordingList = lister(service, driveID, recordingFolderID, 1)
             recordingList.sort(key=sortListofDictionaries)
+
+            responseList = lister(service, driveID, responseFolderID, 1)
             responseList.sort(key=sortListofDictionaries)
+
+            screenshotList = lister(service, driveID, screenshotFolderID, 1)
             screenshotList.sort(key=sortListofDictionaries)
+
+            pcapList = lister(service, driveID, pcapFolderID, 1)
             pcapList.sort(key=sortListofDictionaries)
 
             print("\nTest Name::: [ {0} ]".format(test_name))
@@ -229,37 +230,46 @@ for directory in resultDirectories:
                     print(
                         "\n--Generating Links for [ {0} ]--".format(resultId), end='')
 
-                    # Gathering File IDs...
-                    recordingID = idreturner(resultId, recordingList)
-                    responseID = idreturner(resultId, responseList)
-                    screenshotID = idreturner(resultId, screenshotList)
-                    pcapID = idreturner(resultId, pcapList)
+                    # Parsing Search IDs...
+                    recordingSearchId = f"{resultId}.mp4"
+                    responseSearchId = f"{resultId}.json"
+                    screenshotSearchId = f"{resultId}.jpeg"
+                    pcapSearchId = f"{resultId}.pcap"
 
-                    print("Payload File IDs==", recordingID,
-                          responseID, screenshotID, pcapID)
+                    # Gathering File IDs...
+                    recordingID = idreturner(recordingSearchId, recordingList)
+                    responseID = idreturner(responseSearchId, responseList)
+                    screenshotID = idreturner(
+                        screenshotSearchId, screenshotList)
+                    pcapID = idreturner(pcapSearchId, pcapList)
 
                     # Generating shareable links for above File IDs...
-                    if (recordingID):
-                        # result['Video Link'] = f"{shareUrlParse(recordingID)}"
-                        result['Video Link'] = rf"https://drive.google.com/file/d/{recordingID}"
+                    if (recordingID != None):
+                        result['Video Link'] = f"https://drive.google.com/file/d/{recordingID['value']}"
+                        idIndex = int(recordingID['index'])
+                        del recordingList[idIndex]
                     else:
                         result['Video Link'] = 'N/A'
 
-                    if (responseID):
-                        # result['Response Link'] = f"{shareUrlParse(responseID)}"
-                        result['Response Link'] = rf"https://drive.google.com/file/d/{responseID}"
+                    if (responseID != None):
+                        result['Response Link'] = f"https://drive.google.com/file/d/{responseID['value']}"
+                        idIndex = int(responseID['index'])
+                        del responseList[idIndex]
                     else:
                         result['Response Link'] = 'N/A'
 
-                    if (screenshotID):
-                        # result['Screenshot Link'] = f"{shareUrlParse(screenshotID)}"
-                        result['Screenshot Link'] = rf"https://drive.google.com/file/d/{screenshotID}"
+                    if (screenshotID != None):
+                        result[
+                            'Screenshot Link'] = f"https://drive.google.com/file/d/{screenshotID['value']}"
+                        idIndex = int(screenshotID['index'])
+                        del screenshotList[idIndex]
                     else:
                         result['Screenshot Link'] = 'N/A'
 
-                    if (pcapID):
-                        # result['PCAP Link'] = f"{shareUrlParse(pcapID)}"
-                        result['PCAP Link'] = rf"https://drive.google.com/file/d/{pcapID}"
+                    if (pcapID != None):
+                        result['PCAP Link'] = f"https://drive.google.com/file/d/{pcapID['value']}"
+                        idIndex = int(pcapID['index'])
+                        del pcapList[idIndex]
                     else:
                         result['PCAP Link'] = 'N/A'
 
