@@ -7,8 +7,8 @@ import numpy as np
 from os import path
 import pandas as pd
 from sheet_writer import sharer, writer, shareUrlParse
-from service_creator import Create_Service
-from service_creator import Create_Service2
+from service_creator import Create_Service, Create_Service2, gspreadService
+from gspread_dataframe import set_with_dataframe
 
 # --------------------------------------------------------------------------------------------
 
@@ -33,28 +33,21 @@ parent_directory_id = '--Enter The Parent Directory ID Here--'
 # Spreadsheet ID to populate the results...
 spreadsheet_id = '--Enter The Spreadsheet ID Here--'
 
-driveID = '0AGRZ_Z8RC-_fUk9PVA'
-parent_directory_id = '13iFrOF6KSWRl09OTUJWl_pGMaSu8_Udf'
-spreadsheet_id = '1bVmvF3wigQNekqBvHPxR3aDES8o5HYRet6z5CL66kWc'
-
 # ----------------------------------------------------------------------------------------------------------------------------------
 
 # service = Create_Service(CLIENT_SECRET_FILE, API_NAME, API_VERSION, SCOPES)
 service = Create_Service2(SERVICE_ACCOUNT_FILE, API_NAME, API_VERSION, SCOPES)
 
 
-def sortListofDictionaries(dictionaryList):
-    prefix, postfix = dictionaryList['name'].split('-P')
-    return (prefix, int(postfix.split('.')[0]))
-
-
-def idreturner(id, array):
+def idreturner(id, df, column):
     try:
-        for i, item in enumerate(array):
-            if (f"{id}" in item['name']):
-                return {"index": i, "value": item['id']}
+        if f"{id}" in df[f"{column}"].values:
+            index = df[f"{column}"][df[f"{column}"] == f"{id}"].index[0]
+            return (df.loc[index, 'id'])
+        else:
+            return None
     except Exception as error:
-        print("Error in idreturner Function::: ", error)
+        print("Error in ID Returner Function::: ", error)
         pass
 
 
@@ -150,7 +143,6 @@ def subDirectoryInfo(parentDirectory):
 
 
 resultDirectories = lister(service, driveID, parent_directory_id)
-# print(resultDirectories)
 
 if path.isfile('.\dependencies\generatedReports.txt') is False:
     print("--generatedReports.txt File Created!--")
@@ -164,16 +156,22 @@ reportFile.close()
 for i, value in enumerate(alreadyGeneratedReportList):
     if (len(value) > 0):
         alreadyGeneratedReportList[i] = value.decode('ASCII')
-# print(alreadyGeneratedReportList)
 
 reportGenerationCount = 0
 generatedReports = []
+
+# GSPREAD CLIENT INITIALIZATION...
+gspreadClient = gspreadService(SERVICE_ACCOUNT_FILE)
+spreadsheetObject = gspreadClient.open_by_key(spreadsheet_id)
+worksheetObject = spreadsheetObject.get_worksheet(0)
 
 for directory in resultDirectories:
     try:
         directoryID = str(directory["id"])
         if (not (directoryID in alreadyGeneratedReportList) and (directory["mimeType"] == 'application/vnd.google-apps.folder')):
             reportGenerationCount += 1
+            sheetdata = worksheetObject.get_all_values()
+            sheetdata = pd.DataFrame(sheetdata[1:], columns=sheetdata[0])
             testDirectory = subDirectoryInfo(directory)
 
             # Gathering IDs for further Operation...
@@ -185,18 +183,18 @@ for directory in resultDirectories:
             pcapFolderID = testDirectory['pcapFolderID']
             urlInfoID = testDirectory['urlInfoID']
 
-            # Retrieving List of Files in Respective Directories...
+            # Retrieving List of Files in Respective Directories as Pandas Dataframes...
             recordingList = lister(service, driveID, recordingFolderID, 1)
-            recordingList.sort(key=sortListofDictionaries)
+            recordingList = pd.DataFrame(recordingList)
 
             responseList = lister(service, driveID, responseFolderID, 1)
-            responseList.sort(key=sortListofDictionaries)
+            responseList = pd.DataFrame(responseList)
 
             screenshotList = lister(service, driveID, screenshotFolderID, 1)
-            screenshotList.sort(key=sortListofDictionaries)
+            screenshotList = pd.DataFrame(screenshotList)
 
             pcapList = lister(service, driveID, pcapFolderID, 1)
-            pcapList.sort(key=sortListofDictionaries)
+            pcapList = pd.DataFrame(pcapList)
 
             print("\nTest Name::: [ {0} ]".format(test_name))
             # print("\nRecording List:::", recordingList)
@@ -214,79 +212,83 @@ for directory in resultDirectories:
             csvFile = io.StringIO(csvFile)
             resultDataframe = pd.read_csv(csvFile)
             resultDataframe = resultDataframe.replace(np.nan, '')
-            resultDataframe = resultDataframe.to_dict('records')
+            print(">> DONE")
+
+            print("PARSING SPREADSHEET INFORMATION--", end='')
+            for index, result in resultDataframe.iterrows():
+                index = int(index)
+                resultId = f"{result['Test ID']}-{result['Payload ID']}"
+
+                if (len(str((result['Response Code']))) == 0):
+                    resultDataframe.loc[index, 'Response Code'] = 'N/A'
+
+                if (result['File Downloaded'] == False):
+                    resultDataframe.loc[index, 'Downloaded File Name'] = 'N/A'
+                    resultDataframe.loc[index, 'Downloaded File MD5'] = 'N/A'
+                    resultDataframe.loc[index,
+                                        'Downloaded File Sha256'] = 'N/A'
+                    resultDataframe.loc[index, 'Downloaded File Size'] = 'N/A'
+                    resultDataframe.loc[index,
+                                        'File First Submission Date'] = 'N/A'
+                    resultDataframe.loc[index,
+                                        'File Last Submission Date'] = 'N/A'
+                    resultDataframe.loc[index,
+                                        'File Last Analysis Date'] = 'N/A'
+
+                # Parsing Search IDs...
+                recordingSearchId = f"{resultId}.mp4"
+                responseSearchId = f"{resultId}.json"
+                screenshotSearchId = f"{resultId}.jpeg"
+                pcapSearchId = f"{resultId}.pcap"
+
+                # Gathering File IDs...
+                recordingID = idreturner(
+                    recordingSearchId, recordingList, 'name')
+                responseID = idreturner(responseSearchId, responseList, 'name')
+                screenshotID = idreturner(
+                    screenshotSearchId, screenshotList, 'name')
+                pcapID = idreturner(pcapSearchId, pcapList, 'name')
+
+                # Generating shareable links for above File IDs...
+                if (recordingID != None):
+                    resultDataframe.loc[index,
+                                        'Video Link'] = rf"https://drive.google.com/file/d/{recordingID}"
+                else:
+                    resultDataframe.loc[index, 'Video Link'] = 'N/A'
+
+                if (responseID != None):
+                    resultDataframe.loc[index,
+                                        'Response Link'] = rf"https://drive.google.com/file/d/{responseID}"
+                else:
+                    resultDataframe.loc[index, 'Response Link'] = 'N/A'
+
+                if (screenshotID != None):
+                    resultDataframe.loc[index,
+                                        'Screenshot Link'] = rf"https://drive.google.com/file/d/{screenshotID}"
+                else:
+                    resultDataframe.loc[index, 'Screenshot Link'] = 'N/A'
+
+                if (pcapID != None):
+                    resultDataframe.loc[index,
+                                        'PCAP Link'] = rf"https://drive.google.com/file/d/{pcapID}"
+                else:
+                    resultDataframe.loc[index, 'PCAP Link'] = 'N/A'
+            print(">> DONE")
+
+            # GSPREAD Operation to fill SPREADSHEET...
+            print("Filling Spreadsheet for Test ::: [ {0} ]".format(
+                test_name), end='')
+
+            try:
+                sheetdata = pd.concat(
+                    [sheetdata, resultDataframe], axis=0, ignore_index=True)
+                set_with_dataframe(worksheetObject, sheetdata)
+            except Exception as error:
+                print("GSPREAD ERROR [ {0} ]".format(error))
             print(">> DONE")
 
             # Extracted Headers for Spreadsheet...
-            headers = list(resultDataframe[0].keys())
-
-            print(
-                "\n--Started Link Generation for Recording, Response, Screenshot & Packet Capture Files--")
-
-            for result in resultDataframe:
-                try:
-                    resultId = f"{result['Test ID']}-{result['Payload ID']}"
-
-                    print(
-                        "\n--Generating Links for [ {0} ]--".format(resultId), end='')
-
-                    # Parsing Search IDs...
-                    recordingSearchId = f"{resultId}.mp4"
-                    responseSearchId = f"{resultId}.json"
-                    screenshotSearchId = f"{resultId}.jpeg"
-                    pcapSearchId = f"{resultId}.pcap"
-
-                    # Gathering File IDs...
-                    recordingID = idreturner(recordingSearchId, recordingList)
-                    responseID = idreturner(responseSearchId, responseList)
-                    screenshotID = idreturner(
-                        screenshotSearchId, screenshotList)
-                    pcapID = idreturner(pcapSearchId, pcapList)
-
-                    # Generating shareable links for above File IDs...
-                    if (recordingID != None):
-                        result['Video Link'] = f"https://drive.google.com/file/d/{recordingID['value']}"
-                        idIndex = int(recordingID['index'])
-                        del recordingList[idIndex]
-                    else:
-                        result['Video Link'] = 'N/A'
-
-                    if (responseID != None):
-                        result['Response Link'] = f"https://drive.google.com/file/d/{responseID['value']}"
-                        idIndex = int(responseID['index'])
-                        del responseList[idIndex]
-                    else:
-                        result['Response Link'] = 'N/A'
-
-                    if (screenshotID != None):
-                        result[
-                            'Screenshot Link'] = f"https://drive.google.com/file/d/{screenshotID['value']}"
-                        idIndex = int(screenshotID['index'])
-                        del screenshotList[idIndex]
-                    else:
-                        result['Screenshot Link'] = 'N/A'
-
-                    if (pcapID != None):
-                        result['PCAP Link'] = f"https://drive.google.com/file/d/{pcapID['value']}"
-                        idIndex = int(pcapID['index'])
-                        del pcapList[idIndex]
-                    else:
-                        result['PCAP Link'] = 'N/A'
-
-                    print(">> DONE")
-
-                    # Spreadsheet Writer Function Call for Individual Payload
-                    writer(spreadsheet_id, resultId, headers, result)
-
-                except Exception as error:
-                    resultId = f"{result['Test ID']}-{result['Payload ID']}"
-
-                    print("Error in Generating Link For [ {0} ]::: {1}".format(
-                        resultId, error))
-                    pass
-
-            print("\n--Link Generation Operation Ended--")
-            # print(resultDataframe)
+            # headers = list(resultDataframe[0].keys())
 
             # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
             generatedReports.append(test_name)

@@ -1,9 +1,11 @@
 import os
 import pickle
+import gspread
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 def Create_Service(client_secret_file, api_name, api_version, *scopes):
@@ -66,3 +68,12 @@ def Create_Service2(key_file_location, api_name, api_version, scopes):
     except Exception as error:
         print("Error in Service_Creator.py ::: ", error)
         return None
+
+
+def gspreadService(service_secret_file):
+    # Authorize using the credentials file
+    scope = ['https://spreadsheets.google.com/feeds',
+             'https://www.googleapis.com/auth/drive']
+    credentials = ServiceAccountCredentials.from_json_keyfile_name(
+        service_secret_file, scope)
+    return (gspread.authorize(credentials))
