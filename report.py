@@ -59,8 +59,8 @@ def lister(service, driveId, parentId, sleeptime=None):
     try:
         query = (f"parents ='{parentId}' and trashed=False")
 
-        response = service.files().list(q=query, fields="files(id, name, mimeType)", orderBy='name', includeItemsFromAllDrives=True,
-                                        corpora='drive', driveId=driveId, supportsAllDrives=True).execute()
+        response = service.files().list(q=query, fields="files(id, name, mimeType)", includeItemsFromAllDrives=True,
+                                        corpora='drive', driveId=driveId, supportsAllDrives=True, pageSize=1000).execute()
 
         files = response.get('files')
         df = pd.DataFrame(files)
@@ -163,7 +163,8 @@ generatedReports = []
 # GSPREAD CLIENT INITIALIZATION...
 gspreadClient = gspreadService(SERVICE_ACCOUNT_FILE)
 spreadsheetObject = gspreadClient.open_by_key(spreadsheet_id)
-worksheetObject = spreadsheetObject.get_worksheet(0)
+# worksheetObject = spreadsheetObject.get_worksheet(0)
+worksheetObject = spreadsheetObject.worksheet('dumpsheet')
 
 for directory in resultDirectories:
     try:
@@ -172,6 +173,7 @@ for directory in resultDirectories:
             reportGenerationCount += 1
             sheetdata = worksheetObject.get_all_values()
             sheetdata = pd.DataFrame(sheetdata[1:], columns=sheetdata[0])
+
             testDirectory = subDirectoryInfo(directory)
 
             # Gathering IDs for further Operation...
@@ -214,13 +216,16 @@ for directory in resultDirectories:
             resultDataframe = resultDataframe.replace(np.nan, '')
             print(">> DONE")
 
+            resultDataframe = resultDataframe.rename(
+                columns=lambda x: x.replace('.1', '') if '.1' in x else x)
+
             print("PARSING SPREADSHEET INFORMATION--", end='')
             for index, result in resultDataframe.iterrows():
                 index = int(index)
                 resultId = f"{result['Test ID']}-{result['Payload ID']}"
 
-                if (len(str((result['Response Code']))) == 0):
-                    resultDataframe.loc[index, 'Response Code'] = 'N/A'
+                # if (len(str((result['Response Code']))) == 0):
+                #     resultDataframe.loc[index, 'Response Code'] = 'N/A'
 
                 if (result['File Downloaded'] == False):
                     resultDataframe.loc[index, 'Downloaded File Name'] = 'N/A'
@@ -280,11 +285,20 @@ for directory in resultDirectories:
                 test_name), end='')
 
             try:
-                sheetdata = pd.concat(
+                # Resetting Dataframe Indexes to avoid concat conflicts...
+                sheetdata.reset_index(drop=True, inplace=True)
+                resultDataframe.reset_index(drop=True, inplace=True)
+
+                # Pandas Dataframe Concat Operation...
+                parsedData = pd.concat(
                     [sheetdata, resultDataframe], axis=0, ignore_index=True)
-                set_with_dataframe(worksheetObject, sheetdata)
+
+                # Spreadsheet Dump Operation...
+                set_with_dataframe(worksheetObject, parsedData)
+
             except Exception as error:
                 print("GSPREAD ERROR [ {0} ]".format(error))
+
             print(">> DONE")
 
             # Extracted Headers for Spreadsheet...
