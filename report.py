@@ -12,8 +12,8 @@ from gspread_dataframe import set_with_dataframe
 
 # --------------------------------------------------------------------------------------------
 
-CLIENT_SECRET_FILE = '.\dependencies\client-secret.json'
-SERVICE_ACCOUNT_FILE = '.\dependencies\service-account.json'
+CLIENT_SECRET_FILE = os.path.normpath('.\dependencies\client-secret.json')
+SERVICE_ACCOUNT_FILE = os.path.normpath('.\dependencies\service-account.json')
 API_NAME = 'drive'
 API_VERSION = 'v3'
 SCOPES = ['https://www.googleapis.com/auth/drive']

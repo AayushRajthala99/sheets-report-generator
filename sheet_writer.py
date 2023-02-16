@@ -7,7 +7,7 @@ from datetime import datetime
 
 # downloaded from console and stored in the working discovery
 # SERVICE_ACCOUNT_FILE = 'service-account.json'
-SERVICE_ACCOUNT_FILE = '.\dependencies\service-account.json'
+SERVICE_ACCOUNT_FILE = os.path.normpath('.\dependencies\service-account.json')
 DRIVE_SCOPE = ['https://www.googleapis.com/auth/drive']
 SHEET_SCOPE = ['https://www.googleapis.com/auth/spreadsheets']
 SHEETS_API_NAME = 'sheets'
