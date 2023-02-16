@@ -144,12 +144,13 @@ def subDirectoryInfo(parentDirectory):
 
 resultDirectories = lister(service, driveID, parent_directory_id)
 
-if path.isfile('.\dependencies\generatedReports.txt') is False:
+if path.isfile(os.path.normpath('.\dependencies\generatedReports.txt')) is False:
     print("--generatedReports.txt File Created!--")
-    File = open('.\dependencies\generatedReports.txt', "x")
+    File = open(os.path.normpath('.\dependencies\generatedReports.txt'), "x")
     File.close()
 
-reportFile = open('.\dependencies\generatedReports.txt', 'rb')
+reportFile = open(os.path.normpath(
+    '.\dependencies\generatedReports.txt'), 'rb')
 alreadyGeneratedReportList = reportFile.read().splitlines()
 reportFile.close()
 
@@ -314,7 +315,8 @@ for directory in resultDirectories:
 
             # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
             generatedReports.append(test_name)
-            file = open('.\dependencies\generatedReports.txt', 'a')
+            file = open(os.path.normpath(
+                '.\dependencies\generatedReports.txt'), 'a')
             file.write(f"{directoryID}\n")
             file.close()
 
