@@ -172,7 +172,9 @@ for directory in resultDirectories:
         if (not (directoryID in alreadyGeneratedReportList) and (directory["mimeType"] == 'application/vnd.google-apps.folder')):
             reportGenerationCount += 1
             sheetdata = worksheetObject.get_all_values()
-            sheetdata = pd.DataFrame(sheetdata[1:], columns=sheetdata[0])
+            sheetdata = sheetdata[1:]
+            # sheetdata = pd.DataFrame(sheetdata[1:], columns=sheetdata[0])
+            # print(sheetdata, len(sheetdata))
 
             testDirectory = subDirectoryInfo(directory)
 
@@ -285,16 +287,22 @@ for directory in resultDirectories:
                 test_name), end='')
 
             try:
-                # Resetting Dataframe Indexes to avoid concat conflicts...
-                sheetdata.reset_index(drop=True, inplace=True)
-                resultDataframe.reset_index(drop=True, inplace=True)
+                if (len(sheetdata) > 0):
+                    resultDataframe = resultDataframe.to_dict('records')
+                    keys_list = list(resultDataframe[0].keys())
+                    values_list = [[d[key] for key in keys_list]
+                                   for d in resultDataframe]
 
-                # Pandas Dataframe Concat Operation...
-                parsedData = pd.concat(
-                    [sheetdata, resultDataframe], axis=0, ignore_index=True)
+                    for value in sheetdata:
+                        values_list.append(value)
+
+                    resultDataframe = pd.DataFrame(
+                        values_list, columns=keys_list)
+
+                print(resultDataframe)
 
                 # Spreadsheet Dump Operation...
-                set_with_dataframe(worksheetObject, parsedData)
+                set_with_dataframe(worksheetObject, resultDataframe)
 
             except Exception as error:
                 print("GSPREAD ERROR [ {0} ]".format(error))
