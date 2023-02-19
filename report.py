@@ -59,8 +59,8 @@ def lister(service, driveId, parentId, sleeptime=None):
     try:
         query = (f"parents ='{parentId}' and trashed=False")
 
-        response = service.files().list(q=query, fields="files(id, name, mimeType)", includeItemsFromAllDrives=True,
-                                        corpora='drive', driveId=driveId, supportsAllDrives=True, pageSize=1000).execute()
+        response = service.files().list(q=query, orderBy='name', fields="files(id, name, mimeType)", includeItemsFromAllDrives=True,
+                                        corpora='drive', driveId=driveId, supportsAllDrives=True, pageSize=500).execute()
 
         files = response.get('files')
         df = pd.DataFrame(files)
@@ -164,18 +164,12 @@ generatedReports = []
 # GSPREAD CLIENT INITIALIZATION...
 gspreadClient = gspreadService(SERVICE_ACCOUNT_FILE)
 spreadsheetObject = gspreadClient.open_by_key(spreadsheet_id)
-# worksheetObject = spreadsheetObject.get_worksheet(0)
-worksheetObject = spreadsheetObject.worksheet('dumpsheet')
 
 for directory in resultDirectories:
     try:
         directoryID = str(directory["id"])
         if (not (directoryID in alreadyGeneratedReportList) and (directory["mimeType"] == 'application/vnd.google-apps.folder')):
             reportGenerationCount += 1
-            sheetdata = worksheetObject.get_all_values()
-            sheetdata = sheetdata[1:]
-            # sheetdata = pd.DataFrame(sheetdata[1:], columns=sheetdata[0])
-            # print(sheetdata, len(sheetdata))
 
             testDirectory = subDirectoryInfo(directory)
 
@@ -217,12 +211,13 @@ for directory in resultDirectories:
             csvFile = io.StringIO(csvFile)
             resultDataframe = pd.read_csv(csvFile)
             resultDataframe = resultDataframe.replace(np.nan, '')
+            resultDataframe = resultDataframe.astype(str)
             print(">> DONE")
 
             resultDataframe = resultDataframe.rename(
                 columns=lambda x: x.replace('.1', '') if '.1' in x else x)
 
-            print("PARSING SPREADSHEET INFORMATION--", end='')
+            print("--PARSING SPREADSHEET INFORMATION--", end='')
             for index, result in resultDataframe.iterrows():
                 index = int(index)
                 resultId = f"{result['Test ID']}-{result['Payload ID']}"
@@ -230,7 +225,7 @@ for directory in resultDirectories:
                 # if (len(str((result['Response Code']))) == 0):
                 #     resultDataframe.loc[index, 'Response Code'] = 'N/A'
 
-                if (result['File Downloaded'] == False):
+                if (result['File Downloaded'] == "False"):
                     resultDataframe.loc[index, 'Downloaded File Name'] = 'N/A'
                     resultDataframe.loc[index, 'Downloaded File MD5'] = 'N/A'
                     resultDataframe.loc[index,
@@ -283,48 +278,93 @@ for directory in resultDirectories:
                     resultDataframe.loc[index, 'PCAP Link'] = 'N/A'
             print(">> DONE")
 
-            # GSPREAD Operation to fill SPREADSHEET...
-            print("Filling Spreadsheet for Test ::: [ {0} ]".format(
-                test_name), end='')
-
             try:
+                # GSPREAD Operation to fill SPREADSHEET...
+                print("--POPULATING SPREADSHEET--", end='')
+
+                # Selecting & Retrieving Sheet Value...
+                testID = ""
+                for i in range(18):
+                    index = i+1
+
+                    if (index < 10):
+                        # Parsing Sheet Name for T01,T02,...,T09
+                        index = str(f"T0{index}")
+                    else:
+                        # Parsing Sheet Name for T10,T11,...,T18
+                        index = str(f"T{index}")
+
+                    if (index in test_name):
+                        testID = index
+                        break
+
+                # Selecting Worksheet Based on sheetName...
+                sheetName = ""
+                worksheetList = spreadsheetObject.worksheets()
+                for index, worksheet in enumerate(worksheetList):
+                    if (testID in worksheet.title):
+                        sheetName = worksheetList[index].title
+                        break
+
+                if (sheetName == ""):
+                    sheetName = "ETC"
+
+                worksheetObject = spreadsheetObject.worksheet(f"{sheetName}")
+                sheetdata = worksheetObject.get_all_values()
+                finalDataframe = None
+
                 if (len(sheetdata) > 0):
+                    sheetColumns = sheetdata[0]
+
+                    if (len(sheetColumns) != len(resultDataframe.columns)):
+                        print(f"\nColumns Length Mismatch for {test_name}")
+                        raise Exception("Columns Length Mismatch")
+
+                    sheetValues = sheetdata[1:]
+
                     resultDataframe = resultDataframe.to_dict('records')
                     keys_list = list(resultDataframe[0].keys())
-                    values_list = [[d[key] for key in keys_list]
-                                   for d in resultDataframe]
+                    values_list = [[item[key] for key in keys_list]
+                                   for item in resultDataframe]
 
-                    for value in sheetdata:
-                        values_list.append(value)
+                    sheetValues = sheetValues + values_list
 
-                    resultDataframe = pd.DataFrame(
-                        values_list, columns=keys_list)
+                    finalDataframe = pd.DataFrame(
+                        sheetValues, columns=sheetColumns)
+                else:
+                    finalDataframe = resultDataframe
 
-                print(resultDataframe)
+                finalDataframe = finalDataframe.astype(str)
+
+                # Adding Result Row for Results...
+                resultRow = [""] * len(finalDataframe.columns)
+                resultRow[5] = "Result"
+                resultRow = pd.Series(resultRow, index=finalDataframe.columns)
+
+                finalDataframe = pd.concat(
+                    [finalDataframe, resultRow.to_frame().T], ignore_index=True)
 
                 # Spreadsheet Dump Operation...
-                set_with_dataframe(worksheetObject, resultDataframe)
+                set_with_dataframe(worksheetObject, finalDataframe)
+                print(">> DONE")
+
+                # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
+                generatedReports.append(test_name)
+                file = open(os.path.normpath(
+                    '.\dependencies\generatedReports.txt'), 'a')
+                file.write(f"{directoryID}\n")
+                file.close()
 
             except Exception as error:
-                print("GSPREAD ERROR [ {0} ]".format(error))
-
-            print(">> DONE")
-
-            # Extracted Headers for Spreadsheet...
-            # headers = list(resultDataframe[0].keys())
-
-            # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
-            generatedReports.append(test_name)
-            file = open(os.path.normpath(
-                '.\dependencies\generatedReports.txt'), 'a')
-            file.write(f"{directoryID}\n")
-            file.close()
+                print(">> FAILED")
+                print("\nGSPREAD ERROR [ {0} ]".format(error))
+                pass
 
     except Exception as error:
-        print("Error in Driver Code::: ", error)
+        print("Error in Driver Code ::: ", error)
         pass
 
 if (reportGenerationCount == 0):
-    print("\nNo New Reports Generated")
+    print("\n--[RESULT]--No New Reports Generated")
 elif ((reportGenerationCount > 0) or len(generatedReports)):
-    print("\nGenerated Reports of :: {0}".format(generatedReports))
+    print("\n--[RESULT]--Generated Reports of :: {0}".format(generatedReports))

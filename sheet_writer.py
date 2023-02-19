@@ -1,5 +1,4 @@
 import os
-
 from googleapiclient.discovery import build  # for building service
 # to work with service service_account
 from google.oauth2 import service_account
