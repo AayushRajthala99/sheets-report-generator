@@ -338,7 +338,7 @@ for directory in resultDirectories:
 
                 # Adding Result Row for Results...
                 resultRow = [""] * len(finalDataframe.columns)
-                resultRow[5] = "Result"
+                resultRow[5] = "Blocked Rate"
                 resultRow = pd.Series(resultRow, index=finalDataframe.columns)
 
                 finalDataframe = pd.concat(
