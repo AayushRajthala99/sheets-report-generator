@@ -301,14 +301,22 @@ for directory in resultDirectories:
                 # Selecting Worksheet Based on sheetName...
                 sheetName = ""
                 worksheetList = spreadsheetObject.worksheets()
-                for index, worksheet in enumerate(worksheetList):
-                    if (testID in worksheet.title):
-                        sheetName = worksheetList[index].title
+
+                # Getting a list of worksheets in the selected Spreadsheet...
+                worksheetList = [str(value.title) for value in worksheetList]
+
+                for index, value in enumerate(worksheetList):
+                    if (testID in value):
+                        sheetName = value
                         break
 
+                # If Worksheet doesn't exist then create a new worksheet entitled as testID...
                 if (sheetName == ""):
-                    sheetName = "ETC"
+                    sheetName = testID
+                    spreadsheetObject.add_worksheet(
+                        f"{sheetName}", rows="1", cols="1")
 
+                # Selecting Worksheet based on the sheetName...
                 worksheetObject = spreadsheetObject.worksheet(f"{sheetName}")
                 sheetdata = worksheetObject.get_all_values()
                 finalDataframe = None
