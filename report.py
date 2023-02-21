@@ -230,7 +230,7 @@ for directory in resultDirectories:
 
             for index, result in resultDataframe.iterrows():
                 index = int(index)
-                resultId = f"{result['Test ID']}-{result['Payload ID']}"
+                resultId = f"{result['ID']}-{result['Payload ID']}"
 
                 # if (len(str((result['Response Code']))) == 0):
                 #     resultDataframe.loc[index, 'Response Code'] = 'N/A'
