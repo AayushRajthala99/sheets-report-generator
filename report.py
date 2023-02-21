@@ -1,26 +1,29 @@
 import io
 import os
-import csv
 import json
 import time
 import numpy as np
-from os import path
 import pandas as pd
-from sheet_writer import sharer, writer, shareUrlParse
-from service_creator import Create_Service, Create_Service2, gspreadService
+from os import path as directoryPath
 from gspread_dataframe import set_with_dataframe
+from service_creator import Create_Service, Create_Service2, gspreadService
 
 # --------------------------------------------------------------------------------------------
 
-CLIENT_SECRET_FILE = os.path.normpath('.\dependencies\client-secret.json')
-SERVICE_ACCOUNT_FILE = os.path.normpath('.\dependencies\service-account.json')
+# Secret File Path Assosciation...
+CLIENT_SECRET_FILE = directoryPath.normpath(
+    '.\dependencies\client-secret.json')
+SERVICE_ACCOUNT_FILE = directoryPath.normpath(
+    '.\dependencies\service-account.json')
+
+# API Specification...
 API_NAME = 'drive'
 API_VERSION = 'v3'
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
 # subDirectories = ['Enter the directories to be listed in the report']
 
-# Example of subDirectories...
+# Example of subDirectories/Files...
 subDirectories = ['recordings', 'responses',
                   'screenshots', 'packetcaptures', 'urlInfo.csv']
 
@@ -29,9 +32,6 @@ driveID = '--Enter The Drive ID Here--'
 
 # Parent Directory ID of the shared drive....
 parent_directory_id = '--Enter The Parent Directory ID Here--'
-
-# Spreadsheet ID to populate the results...
-spreadsheet_id = '--Enter The Spreadsheet ID Here--'
 
 # ----------------------------------------------------------------------------------------------------------------------------------
 
@@ -144,12 +144,13 @@ def subDirectoryInfo(parentDirectory):
 
 resultDirectories = lister(service, driveID, parent_directory_id)
 
-if path.isfile(os.path.normpath('.\dependencies\generatedReports.txt')) is False:
+if directoryPath.isfile(directoryPath.normpath('.\dependencies\generatedReports.txt')) is False:
     print("--generatedReports.txt File Created!--")
-    File = open(os.path.normpath('.\dependencies\generatedReports.txt'), "x")
+    File = open(directoryPath.normpath(
+        '.\dependencies\generatedReports.txt'), "x")
     File.close()
 
-reportFile = open(os.path.normpath(
+reportFile = open(directoryPath.normpath(
     '.\dependencies\generatedReports.txt'), 'rb')
 alreadyGeneratedReportList = reportFile.read().splitlines()
 reportFile.close()
@@ -163,7 +164,6 @@ generatedReports = []
 
 # GSPREAD CLIENT INITIALIZATION...
 gspreadClient = gspreadService(SERVICE_ACCOUNT_FILE)
-spreadsheetObject = gspreadClient.open_by_key(spreadsheet_id)
 
 for directory in resultDirectories:
     try:
@@ -182,7 +182,11 @@ for directory in resultDirectories:
             pcapFolderID = testDirectory['pcapFolderID']
             urlInfoID = testDirectory['urlInfoID']
 
+            print("\nTest Name::: [ {0} ]".format(test_name))
+
             # Retrieving List of Files in Respective Directories as Pandas Dataframes...
+            print("\n--Retrieving Files List from Subdirectories--", end='')
+
             recordingList = lister(service, driveID, recordingFolderID, 1)
             recordingList = pd.DataFrame(recordingList)
 
@@ -195,29 +199,35 @@ for directory in resultDirectories:
             pcapList = lister(service, driveID, pcapFolderID, 1)
             pcapList = pd.DataFrame(pcapList)
 
-            print("\nTest Name::: [ {0} ]".format(test_name))
+            print(">> DONE")
+
+            # List Information...
             # print("\nRecording List:::", recordingList)
             # print("\nResponse List:::", responseList)
             # print("\nScreenshot List:::", screenshotList)
             # print("\nPCAP List:::", pcapList)
 
-            # urlInfoCSVLink = sharer(urlInfoID)
-            # print("urlInfo.csv LINK:::", urlInfoCSVLink)
+            print("--Gathering urlInfo.csv Information--", end='')
 
-            print("\n--Gathering urlInfo.csv Information--", end='')
+            # Getting urlInfo.csv File Contents...
             request = service.files().get_media(fileId=urlInfoID)
             csvFile = request.execute()
             csvFile = csvFile.decode("utf-8")
             csvFile = io.StringIO(csvFile)
+
+            # Converting CSV File contents to Pandas Dataframe...
             resultDataframe = pd.read_csv(csvFile)
             resultDataframe = resultDataframe.replace(np.nan, '')
             resultDataframe = resultDataframe.astype(str)
+
             print(">> DONE")
 
+            # Formatting Columns of the resultDataframe...
             resultDataframe = resultDataframe.rename(
                 columns=lambda x: x.replace('.1', '') if '.1' in x else x)
 
             print("--PARSING SPREADSHEET INFORMATION--", end='')
+
             for index, result in resultDataframe.iterrows():
                 index = int(index)
                 resultId = f"{result['Test ID']}-{result['Payload ID']}"
@@ -276,6 +286,7 @@ for directory in resultDirectories:
                                         'PCAP Link'] = rf"https://drive.google.com/file/d/{pcapID}"
                 else:
                     resultDataframe.loc[index, 'PCAP Link'] = 'N/A'
+
             print(">> DONE")
 
             try:
@@ -297,6 +308,28 @@ for directory in resultDirectories:
                     if (index in test_name):
                         testID = index
                         break
+
+                # Selecting Spreadsheet Based on the VM Information...
+                VMName = test_name.split("-")[0]
+
+                sheetsInfo = open(directoryPath.abspath(
+                    './dependencies/ACFW-env.json'), 'r')
+                sheetsInfoJson = json.load(sheetsInfo)
+                sheetsInfo.close()
+
+                # Getting VMName...
+                spreadsheet_id = ""
+                for info in sheetsInfoJson:
+                    if (VMName in info["acronym"]):
+                        spreadsheet_id = info["spreadsheetID"]
+                        break
+
+                # Appending the scorecard on DUMP Sheet if spreadsheet not found in above...
+                if (spreadsheet_id == ""):
+                    spreadsheet_id = sheetsInfoJson[-1]["spreadsheetID"]
+
+                # Accessing Spreadsheet File using spreadsheet_id...
+                spreadsheetObject = gspreadClient.open_by_key(spreadsheet_id)
 
                 # Selecting Worksheet Based on sheetName...
                 sheetName = ""
@@ -358,7 +391,7 @@ for directory in resultDirectories:
 
                 # Adding Result Folder ID to generatedReports.txt (if only the reports are Generated)...
                 generatedReports.append(test_name)
-                file = open(os.path.normpath(
+                file = open(directoryPath.normpath(
                     '.\dependencies\generatedReports.txt'), 'a')
                 file.write(f"{directoryID}\n")
                 file.close()
