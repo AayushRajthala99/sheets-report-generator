@@ -354,6 +354,8 @@ for directory in resultDirectories:
                 sheetdata = worksheetObject.get_all_values()
                 finalDataframe = None
 
+                payloadCount = len(resultDataframe.index.values)
+
                 if (len(sheetdata) > 0):
                     sheetColumns = sheetdata[0]
 
@@ -379,7 +381,20 @@ for directory in resultDirectories:
 
                 # Adding Result Row for Results...
                 resultRow = [""] * len(finalDataframe.columns)
-                resultRow[5] = "Blocked Rate"
+
+                finalDataframeIndex = len(finalDataframe.index.values) + 2
+                # print(payloadCount, (finalDataframeIndex))
+
+                initialIndex = finalDataframeIndex - payloadCount
+                finalIndex = finalDataframeIndex - 1
+
+                # Setting payloadCount to 120 for current Test Case, Remove this to make things more dynamic...
+                payloadCount = 120
+
+                # Parsing Cells & Formulas for the Sheets...
+                resultRow[8] = "Blocked Rate"
+                resultRow[9] = f"=countif(J{initialIndex}:J{finalIndex},'Blocked')/{payloadCount}"
+
                 resultRow = pd.Series(resultRow, index=finalDataframe.columns)
 
                 finalDataframe = pd.concat(
