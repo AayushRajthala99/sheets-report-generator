@@ -12,9 +12,9 @@ from service_creator import Create_Service, Create_Service2, gspreadService
 
 # Secret File Path Assosciation...
 CLIENT_SECRET_FILE = directoryPath.normpath(
-    '.\dependencies\client-secret.json')
+    './dependencies/client-secret.json')
 SERVICE_ACCOUNT_FILE = directoryPath.normpath(
-    '.\dependencies\service-account.json')
+    './dependencies/service-account.json')
 
 # API Specification...
 API_NAME = 'drive'
@@ -232,8 +232,8 @@ for directory in resultDirectories:
                 index = int(index)
                 resultId = f"{result['ID']}-{result['Payload ID']}"
 
-                # if (len(str((result['Response Code']))) == 0):
-                #     resultDataframe.loc[index, 'Response Code'] = 'N/A'
+                if (len(str((result['Response Code']))) == 0):
+                    resultDataframe.loc[index, 'Response Code'] = 'N/A'
 
                 if (result['File Downloaded'] == "False"):
                     resultDataframe.loc[index, 'Downloaded File Name'] = 'N/A'
