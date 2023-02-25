@@ -144,14 +144,14 @@ def subDirectoryInfo(parentDirectory):
 
 resultDirectories = lister(service, driveID, parent_directory_id)
 
-if directoryPath.isfile(directoryPath.normpath('.\dependencies\generatedReports.txt')) is False:
+if directoryPath.isfile(directoryPath.normpath('./dependencies/generatedReports.txt')) is False:
     print("--generatedReports.txt File Created!--")
     File = open(directoryPath.normpath(
-        '.\dependencies\generatedReports.txt'), "x")
+        './dependencies/generatedReports.txt'), "x")
     File.close()
 
 reportFile = open(directoryPath.normpath(
-    '.\dependencies\generatedReports.txt'), 'rb')
+    './dependencies/generatedReports.txt'), 'rb')
 alreadyGeneratedReportList = reportFile.read().splitlines()
 reportFile.close()
 
