@@ -305,7 +305,7 @@ for directory in resultDirectories:
                         # Parsing Sheet Name for T10,T11,...,T18
                         index = str(f"T{index}")
 
-                    if (index in test_name):
+                    if (f"-{index}" in test_name):
                         testID = index
                         break
 
@@ -388,12 +388,9 @@ for directory in resultDirectories:
                 initialIndex = finalDataframeIndex - payloadCount
                 finalIndex = finalDataframeIndex - 1
 
-                # Setting payloadCount to 120 for current Test Case, Remove this to make things more dynamic...
-                payloadCount = 120
-
                 # Parsing Cells & Formulas for the Sheets...
                 resultRow[8] = "Blocked Rate"
-                resultRow[9] = f"=countif(J{initialIndex}:J{finalIndex},'Blocked')/{payloadCount}"
+                resultRow[9] = rf"=countif(J{initialIndex}:J{finalIndex},'Blocked')/{payloadCount}"
 
                 resultRow = pd.Series(resultRow, index=finalDataframe.columns)
 
