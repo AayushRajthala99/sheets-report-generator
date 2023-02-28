@@ -142,6 +142,15 @@ def subDirectoryInfo(parentDirectory):
         pass
 
 
+if directoryPath.isfile(directoryPath.normpath('./dependencies/env.json')) is False:
+    print("--ERROR--ENVIRONMENT FILE IS MISSING--")
+    exit()
+
+envInfo = open(os.path.abspath(
+    './dependencies/env.json'), 'r')
+envInfoJson = json.load(envInfo)
+envInfo.close()
+
 resultDirectories = lister(service, driveID, parent_directory_id)
 
 if directoryPath.isfile(directoryPath.normpath('./dependencies/generatedReports.txt')) is False:
@@ -293,40 +302,34 @@ for directory in resultDirectories:
                 # GSPREAD Operation to fill SPREADSHEET...
                 print("--POPULATING SPREADSHEET--", end='')
 
-                # Selecting & Retrieving Sheet Value...
-                testID = ""
-                for i in range(18):
-                    index = i+1
-
-                    if (index < 10):
-                        # Parsing Sheet Name for T01,T02,...,T09
-                        index = str(f"T0{index}")
-                    else:
-                        # Parsing Sheet Name for T10,T11,...,T18
-                        index = str(f"T{index}")
-
-                    if (f"-{index}" in test_name):
-                        testID = index
-                        break
-
                 # Selecting Spreadsheet Based on the VM Information...
                 VMName = test_name.split("-")[0]
 
-                sheetsInfo = open(directoryPath.abspath(
-                    './dependencies/ACFW-env.json'), 'r')
-                sheetsInfoJson = json.load(sheetsInfo)
-                sheetsInfo.close()
+                # Parsing Information from JSON File...
+                worksheetInfo = envInfoJson['worksheet']
+                spreadsheetInfo = envInfoJson['spreadsheet']
+                testIDList = [value['id'] for value in worksheetInfo]
+
+                # Selecting & Retrieving Sheet Value...
+                testID = ""
+                for i in testIDList:
+                    if (f"-{i}" in test_name):
+                        testID = str(i)
+                        break
+
+                if (testID == ""):
+                    testID = test_name
 
                 # Getting VMName...
                 spreadsheet_id = ""
-                for info in sheetsInfoJson:
+                for info in spreadsheetInfo:
                     if (VMName in info["acronym"]):
                         spreadsheet_id = info["spreadsheetID"]
                         break
 
                 # Appending the scorecard on DUMP Sheet if spreadsheet not found in above...
                 if (spreadsheet_id == ""):
-                    spreadsheet_id = sheetsInfoJson[-1]["spreadsheetID"]
+                    spreadsheet_id = spreadsheetInfo[-1]["spreadsheetID"]
 
                 # Accessing Spreadsheet File using spreadsheet_id...
                 spreadsheetObject = gspreadClient.open_by_key(spreadsheet_id)
@@ -338,10 +341,11 @@ for directory in resultDirectories:
                 # Getting a list of worksheets in the selected Spreadsheet...
                 worksheetList = [str(value.title) for value in worksheetList]
 
-                for index, value in enumerate(worksheetList):
-                    if (testID in value):
-                        sheetName = value
-                        break
+                if (testID in testIDList):
+                    for worksheet in worksheetInfo:
+                        if worksheet['id'] in worksheetList:
+                            sheetName = worksheet['name']
+                            break
 
                 # If Worksheet doesn't exist then create a new worksheet entitled as testID...
                 if (sheetName == ""):
