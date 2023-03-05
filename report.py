@@ -313,7 +313,7 @@ for directory in resultDirectories:
                 # Selecting & Retrieving Sheet Value...
                 testID = ""
                 for i in testIDList:
-                    if (f"-{i}" in test_name):
+                    if (f"-T{i}" in test_name):
                         testID = str(i)
                         break
 
@@ -341,11 +341,10 @@ for directory in resultDirectories:
                 # Getting a list of worksheets in the selected Spreadsheet...
                 worksheetList = [str(value.title) for value in worksheetList]
 
-                if (testID in testIDList):
-                    for worksheet in worksheetInfo:
-                        if worksheet['id'] in worksheetList:
-                            sheetName = worksheet['name']
-                            break
+                for worksheet in worksheetInfo:
+                    if ((testID == worksheet['id']) and (worksheet['name'] in worksheetList)):
+                        sheetName = worksheet['name']
+                        break
 
                 # If Worksheet doesn't exist then create a new worksheet entitled as testID...
                 if (sheetName == ""):
